@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Verification</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;margin:24px;background:#fafafa;color:#222}
+  h1{margin-bottom:6px}
+  p.small{color:#555}
+  #codeBox{margin-top:18px;font-size:1.6rem;color:#0b6b3a;font-weight:700}
+  button{padding:10px 14px;border-radius:8px;border:none;margin-top:12px;cursor:pointer}
+  #verifyAuto{background:#1976d2;color:#fff}
+  #returnBtn{background:#e0e0e0;margin-left:10px}
+</style>
+</head>
+<body>
+
+<h1>Your verification code</h1>
+<p class="small">You reached this page after completing the Linkvertise task. Wait a moment — your code will appear automatically.</p>
+
+<div id="codeBox">Generating code…</div>
+<button id="verifyAuto" disabled>Verify Automatically</button>
+<button id="returnBtn">Return to Tasks</button>
+
+<!-- Include Linkvertise script so that clicks on index are monetized; not required here but okay to keep -->
+<script src="https://publisher.linkvertise.com/cdn/linkvertise.js"></script>
+<script>try{ linkvertise(1436408,{ whitelist:[], blacklist:[] }); }catch(e){}</script>
+
+<script>
+(function(){
+  const params = new URLSearchParams(location.search);
+  const taskId = params.get('id');
+  if (!taskId) {
+    document.getElementById('codeBox').textContent = 'Error: task id missing.';
+    return;
+  }
+
+  // Wait 30s (simulate Linkvertise flow). After that generate and store code.
+  const delayMs = 0000; // 2s
+  setTimeout(() => {
+    const code = String(Math.floor(100 + Math.random()*900)); // 100..999
+    // save code in localStorage map
+    const KEY_CODES = 'taskCodes';
+    let codes = JSON.parse(localStorage.getItem(KEY_CODES) || '{}');
+    codes[taskId] = code;
+    localStorage.setItem(KEY_CODES, JSON.stringify(codes));
+    // show code and enable auto verify
+    document.getElementById('codeBox').textContent = `Your code: ${code}`;
+    const btn = document.getElementById('verifyAuto');
+    btn.disabled = false;
+    // clicking auto-verify redirects to index with autoVerify flag
+    btn.addEventListener('click', () => {
+      // add query so index will auto-verify
+      const indexUrl = 'index.html?autoVerify=1&id=' + encodeURIComponent(taskId);
+      // Use location.href to navigate
+      location.href = indexUrl;
+    });
+  }, delayMs);
+
+  // Return button
+  document.getElementById('returnBtn').addEventListener('click', () => {
+    location.href = 'index.html';
+  });
+
+  // Optional: show code earlier if localStorage already contains it (rare)
+  const KEY_CODES = 'taskCodes';
+  const existing = JSON.parse(localStorage.getItem(KEY_CODES) || '{}');
+  if (existing[taskId]) {
+    document.getElementById('codeBox').textContent = `Your code: ${existing[taskId]}`;
+    document.getElementById('verifyAuto').disabled = false;
+  }
+})();
+</script>
+</body>
+</html>

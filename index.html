@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>1000 Linkvertise Tasks — Dashboard</title>
+<style>
+  :root{
+    --bg:#f6f7f9;
+    --card:#fff;
+    --muted:#666;
+    --accent:#1976d2;
+    --green:#4caf50;
+  }
+  body{
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    margin:0;
+    background:var(--bg);
+    color:#222;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* Top fixed header area */
+  header{
+    position:sticky;
+    top:0;
+    z-index:1000;
+    background:#fff;
+    border-bottom:1px solid #e6e6e6;
+    padding:12px 18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:20px;
+    box-shadow: 0 2px 6px rgba(20,20,20,0.03);
+  }
+
+  /* Center container for counter + progress */
+  .top-center {
+    display:flex;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+
+  /* Counter pill */
+  #taskCounter {
+    background:var(--accent);
+    color:#fff;
+    padding:8px 14px;
+    border-radius:999px;
+    font-weight:700;
+    min-width:160px;
+    text-align:center;
+    box-shadow: 0 3px 10px rgba(25,118,210,0.12);
+  }
+
+  /* Progress container */
+  #progress-container{
+    width:420px;
+    max-width:60vw;
+    height:28px;
+    background:#eef3fb;
+    border-radius:999px;
+    overflow:hidden;
+    box-shadow: inset 0 -1px 0 rgba(0,0,0,0.02);
+  }
+  #progress-bar{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,var(--green), #66bb6a);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#fff;
+    font-weight:700;
+    white-space:nowrap;
+    transition: width .35s ease;
+    font-size:13px;
+  }
+
+  /* Main area */
+  main{
+    max-width:1100px;
+    margin:18px auto;
+    padding:8px 18px 80px;
+  }
+  h1{font-size:20px;margin:8px 0 14px}
+  p.lead{color:var(--muted);margin-top:0;margin-bottom:16px}
+
+  /* Task list */
+  #tasks{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+  .task-card{
+    background:var(--card);
+    border:1px solid #e6e6e6;
+    padding:10px 12px;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .left{display:flex;gap:10px;align-items:center;min-width:0}
+  a.tasklink{
+    padding:8px 12px;
+    background:#fff;
+    border:1px solid #cddbe8;
+    border-radius:8px;
+    color:var(--accent);
+    text-decoration:none;
+    font-weight:600;
+    white-space:nowrap;
+  }
+  input.code{width:80px;padding:6px;border:1px solid #d0d7df;border-radius:8px}
+  button.verify{padding:7px 12px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer}
+
+  .verified-badge{
+    background:#e8f8ef;color:#0b6b3a;padding:6px 10px;border-radius:999px;font-weight:700;border:1px solid #d7f0df;margin-left:8px;
+  }
+
+  .small{font-size:13px;color:var(--muted)}
+  @media (max-width:600px){
+    #progress-container{width:60vw}
+    .task-card{flex-direction:column;align-items:flex-start}
+    .left{width:100%}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="top-center">
+    <div id="taskCounter">0 / 1000 completed</div>
+    <div id="progress-container"><div id="progress-bar">0% (0/1000)</div></div>
+  </div>
+</header>
+
+<main>
+  <h1>Monetized Tasks</h1>
+  <p class="lead">Click any task — Linkvertise will wrap the link. After you complete the Linkvertise flow you’ll be redirected to <code>verify.html?id=TASK</code> which generates your code. Use Verify (or the auto-verify flow) to mark a task completed.</p>
+
+  <div id="tasks"></div>
+</main>
+
+<!-- Linkvertise publisher script -->
+<script src="https://publisher.linkvertise.com/cdn/linkvertise.js"></script>
+<script>
+try { linkvertise(1436408, { whitelist: [], blacklist: [] }); }
+catch(e) { console.warn('Linkvertise init error', e); }
+</script>
+
+<script>
+/* ---------- CONFIG ---------- */
+const TOTAL = 1000;
+const KEY_CODES = 'taskCodes';
+const KEY_VERIFIED = 'verifiedTasks';
+
+const tasksEl = document.getElementById('tasks');
+const progressBarEl = document.getElementById('progress-bar');
+const counterEl = document.getElementById('taskCounter');
+
+/* ---------- LOAD PERSISTED ---------- */
+let taskCodes = JSON.parse(localStorage.getItem(KEY_CODES) || '{}');
+let verifiedTasks = JSON.parse(localStorage.getItem(KEY_VERIFIED) || '{}');
+let verifiedCount = Object.keys(verifiedTasks).length;
+
+/* ---------- UI helpers ---------- */
+function updateProgressUI(){
+  const pct = Math.round((verifiedCount / TOTAL) * 100);
+  progressBarEl.style.width = pct + '%';
+  progressBarEl.textContent = `${pct}% (${verifiedCount}/${TOTAL})`;
+  counterEl.textContent = `${verifiedCount} / ${TOTAL} completed`;
+}
+
+/* ---------- MARK VERIFIED ---------- */
+function markVerified(id){
+  if (verifiedTasks[id]) return;
+  verifiedTasks[id] = true;
+  localStorage.setItem(KEY_VERIFIED, JSON.stringify(verifiedTasks));
+  verifiedCount = Object.keys(verifiedTasks).length;
+  // update the specific UI card
+  const card = document.getElementById('task-card-'+id);
+  if (card){
+    card.classList.add('done');
+    const right = card.querySelector('.right');
+    right.innerHTML = `<span class="verified-badge">Verified</span>`;
+  }
+  updateProgressUI();
+}
+
+/* ---------- BUILD TASKS ---------- */
+for (let i=1;i<=TOTAL;i++){
+  const card = document.createElement('div');
+  card.className = 'task-card';
+  card.id = 'task-card-'+i;
+
+  const left = document.createElement('div'); left.className='left';
+  const a = document.createElement('a');
+  a.className = 'tasklink';
+  a.href = `verify.html?id=${i}`;
+  a.textContent = `Task ${i}`;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  left.appendChild(a);
+
+  const input = document.createElement('input');
+  input.className = 'code';
+  input.id = 'input-'+i;
+  input.placeholder = 'Code';
+
+  left.appendChild(input);
+
+  const right = document.createElement('div'); right.className = 'right';
+
+  const btn = document.createElement('button');
+  btn.className = 'verify';
+  btn.textContent = 'Verify';
+  btn.addEventListener('click', () => {
+    const entered = (input.value||'').trim();
+    if (taskCodes[i] && entered === taskCodes[i]) {
+      markVerified(String(i));
+    } else {
+      // brief invalid feedback
+      btn.textContent = 'Invalid';
+      setTimeout(()=> btn.textContent = 'Verify', 900);
+    }
+  });
+
+  // If previously verified, show badge
+  if (verifiedTasks[i]) {
+    right.innerHTML = `<span class="verified-badge">Verified</span>`;
+    input.value = taskCodes[i] || '';
+    input.disabled = true;
+  } else {
+    right.appendChild(btn);
+  }
+
+  card.appendChild(left);
+  card.appendChild(right);
+  tasksEl.appendChild(card);
+}
+
+/* ---------- auto-verify handler when returning with query ?autoVerify=1&id=X ---------- */
+(function handleAutoVerify(){
+  const params = new URLSearchParams(location.search);
+  const auto = params.get('autoVerify');
+  const id = params.get('id');
+  if (auto === '1' && id) {
+    // reload taskCodes from storage (in case verify.html wrote it)
+    taskCodes = JSON.parse(localStorage.getItem(KEY_CODES) || '{}');
+    if (taskCodes[id]) {
+      // fill input, mark verified
+      const inp = document.getElementById('input-'+id);
+      if (inp) inp.value = taskCodes[id];
+      markVerified(id);
+      // remove query so it doesn't auto-run again
+      history.replaceState(null,'',location.pathname);
+      // small notification
+      setTimeout(()=> alert(`Task ${id} verified.`), 200);
+    } else {
+      alert('Verification code not ready yet — please wait a moment and try again.');
+    }
+  }
+})();
+
+/* ---------- storage event to pick up changes from verify.html if open in other tab */ 
+window.addEventListener('storage', (e)=>{
+  if (e.key === KEY_CODES) {
+    taskCodes = JSON.parse(e.newValue || '{}');
+  }
+  if (e.key === KEY_VERIFIED) {
+    verifiedTasks = JSON.parse(e.newValue || '{}');
+    verifiedCount = Object.keys(verifiedTasks).length;
+    updateProgressUI();
+  }
+});
+
+/* ---------- init UI ---------- */
+updateProgressUI();
+</script>
+</body>
+</html>
